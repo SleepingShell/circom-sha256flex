@@ -1,0 +1,27 @@
+{
+  "name": "circom-sha256flex",
+  "version": "1.0.0",
+  "description": "Variable length sha256 hashing",
+  "main": "index.js",
+  "repository": "github.com/sleepingshell/circom-sha256flex",
+  "author": "SleepingShell",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^20.10.5",
+    "circomlib": "^2.0.5",
+    "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "@noble/hashes": "^1.3.3",
+    "@types/chai": "^4.3.11",
+    "@types/expect": "^24.3.0",
+    "@types/mocha": "^10.0.6",
+    "chai": "^4.3.10",
+    "circom_tester": "^0.0.20",
+    "mocha": "^10.2.0",
+    "ts-node": "^10.9.2"
+  },
+  "scripts": {
+    "test": "NODE_OPTIONS=--max_old_space_size=0 mocha --timeout 0 -r ts-node/register 'test/**/*.ts'"
+  }
+}
