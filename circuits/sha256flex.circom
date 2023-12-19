@@ -153,19 +153,34 @@ template Sha256Flexible(nBits) {
     }
   }
 
-  var out_var[256];
   component blockChooser[nBlocks];
+  component summer[256];
+  for (var i = 0; i < 256; i++) summer[i] = Sum(nBlocks);
   for (var i = 0; i < nBlocks; i++) {
     blockChooser[i] = IsEqual();
     blockChooser[i].in[0] <== i;
     blockChooser[i].in[1] <-- ((num_bits_in + 64)\512); // FIXME THIS IS UNCONSTRAINED
 
     for (var k=0; k<256; k++) {
-      out_var[k] += sha256compression[i].out[k] * blockChooser[i].out;
+      summer[k].in[i] <== sha256compression[i].out[k] * blockChooser[i].out;
     }
   }
 
   for (var k = 0; k < 256; k++) {
-    out[k] <-- out_var[k]; // TODO
+    out[k] <== summer[k].out;
   }
+}
+
+// Sum over all the inputs
+template Sum(n) {
+  signal input in[n];
+  signal output out;
+
+  signal sum[n];
+  sum[0] <== in[0];
+  for (var i = 1; i < n; i++) {
+    sum[i] <== sum[i-1] + in[i];
+  }
+
+  out <== sum[n-1];
 }
