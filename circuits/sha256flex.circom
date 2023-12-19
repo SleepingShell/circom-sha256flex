@@ -14,17 +14,31 @@ template Sha256Input(nBits) {
 
   var num_bits_in = num_bytes*8;
   var nBlocks_in = ((num_bits_in + 64)\512)+1;
-  assert(num_bits_in < nBits);    // We need room for the 1 bit at the end of input
+  //assert(num_bits_in < nBits);    // We need room for the 1 bit at the end of input
+
+  // component nBlock_lt = LessThan(64);
+  // nBlock_lt.in[0] <== (nBlocks_in-1)*512;
+  // nBlock_lt.in[1] <== num_bits_in+64;
+  // nBlock_lt.out === 1;
+  // component nBlock_gt = GreaterEqThan(64);
+  // nBlock_gt.in[0] <== (nBlocks_in-1)*512;
+  // nBlock_gt.in[1] <== num_bits_in-512;
+  // nBlock_gt.out === 1;
 
   component length_bits = Num2Bits(64);
   length_bits.in <== num_bits_in;
 
   component decider_lt[nBlocks*512];
   component decider_eq[nBlocks*512];
-  component decider_length[nBlocks*64];
+  component decider_length[nBlocks];
   component muxers[nBlocks*64];
+
+  component constrain_lt[nBlocks];
+  component constrain_gt[nBlocks];
   
   for (var k = 0; k < nBlocks-1; k++) {
+
+    // The first 448 bits will always be either input puts, the `1` delimiter bit, or 0
     for (var i = 0; i < 448; i++) {
       decider_lt[k*512+i] = LessThan(64);
       decider_lt[k*512+i].in[0] <== k*512+i;
@@ -37,6 +51,21 @@ template Sha256Input(nBits) {
       paddedIn[k*512+i] <== 1*decider_eq[k*512+i].out + (in[k*512+i] * decider_lt[k*512+i].out);
     }
 
+    // We need to determine if we are in the final block, which means the last 64 bits should be the counter
+    decider_length[k] = IsEqual();
+    decider_length[k].in[0] <== k;
+    decider_length[k].in[1] <-- nBlocks_in-1;
+
+    // Because the number of bits is from an input signal, we can only constrain the number of blocks by less than and greater than components
+    constrain_lt[k] = LessThan(64);
+    constrain_lt[k].in[0] <== decider_length[k].in[1]*512;
+    constrain_lt[k].in[1] <== num_bits_in+64;
+    constrain_lt[k].out === 1;
+    constrain_gt[k] = GreaterEqThan(64);
+    constrain_gt[k].in[0] <== decider_length[k].in[1]*512;
+    constrain_gt[k].in[1] <== num_bits_in-512;
+    constrain_gt[k].out === 1;
+
     for (var i = 448; i < 512; i++) {
       decider_lt[k*512+i] = LessThan(64);
       decider_lt[k*512+i].in[0] <== k*512+i;
@@ -46,11 +75,6 @@ template Sha256Input(nBits) {
       decider_eq[k*512+i].in[0] <== k*512+i;
       decider_eq[k*512+i].in[1] <== num_bits_in;
 
-      decider_length[k*64+i-448] = IsEqual();
-      decider_length[k*64+i-448].in[0] <== k;
-      decider_length[k*64+i-448].in[1] <-- ((num_bits_in + 64)\512);
-      //decider_length[k*64+i-448].in[1]*512 + 1 === num_bits_in + 64;    // FIXME THIS IS UNCONSTRAINED
-
       muxers[k*64+i-448] = Mux2();
       muxers[k*64+i-448].c[0] <== 0;
       muxers[k*64+i-448].c[1] <== in[k*512];
@@ -58,7 +82,7 @@ template Sha256Input(nBits) {
       muxers[k*64+i-448].c[3] <== 1;
 
       muxers[k*64+i-448].s[0] <== decider_eq[k*512+i].out + decider_lt[k*512+i].out;
-      muxers[k*64+i-448].s[1] <== decider_eq[k*512+i].out + decider_length[k*64+i-448].out;
+      muxers[k*64+i-448].s[1] <== decider_eq[k*512+i].out + decider_length[k].out;
 
       paddedIn[k*512+i] <== muxers[k*64+i-448].out;
     }
@@ -83,7 +107,6 @@ template Sha256Flexible(nBits) {
 
   component padding = Sha256Input(nBits);
   padding.num_bytes <== num_bytes;
-  //padding.in <== in;
   padding.in <== paddingInput;
 
   signal bits[nBlocks*512] <== padding.paddedIn;
