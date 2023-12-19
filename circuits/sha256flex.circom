@@ -95,7 +95,6 @@ template Sha256Flexible(nBits) {
   signal output out[256];
 
   var nBlocks = ((nBits + 64)\512)+1;
-  //signal input in[nBlocks*512];
   signal input in[nBits];
 
   var num_bits_in = num_bytes*8;
@@ -110,6 +109,17 @@ template Sha256Flexible(nBits) {
   padding.in <== paddingInput;
 
   signal bits[nBlocks*512] <== padding.paddedIn;
+
+  component hasher = Sha256Function(nBlocks);
+  hasher.in <== bits;
+  hasher.endBlock <-- nBlocks_in-1;// FIXME THIS IS UNCONSTRAINED
+  out <== hasher.out;
+}
+
+template Sha256Function(nBlocks) {
+  signal input in[nBlocks*512];
+  signal input endBlock;
+  signal output out[256];
 
   component ha0 = H(0);
   component hb0 = H(1);
@@ -149,7 +159,7 @@ template Sha256Flexible(nBits) {
     }
 
     for (var k=0; k<512; k++) {
-      sha256compression[i].inp[k] <== bits[i*512+k];
+      sha256compression[i].inp[k] <== in[i*512+k];
     }
   }
 
@@ -159,7 +169,7 @@ template Sha256Flexible(nBits) {
   for (var i = 0; i < nBlocks; i++) {
     blockChooser[i] = IsEqual();
     blockChooser[i].in[0] <== i;
-    blockChooser[i].in[1] <-- ((num_bits_in + 64)\512); // FIXME THIS IS UNCONSTRAINED
+    blockChooser[i].in[1] <== endBlock;
 
     for (var k=0; k<256; k++) {
       summer[k].in[i] <== sha256compression[i].out[k] * blockChooser[i].out;
