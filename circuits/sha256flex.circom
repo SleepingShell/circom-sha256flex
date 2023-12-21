@@ -7,26 +7,25 @@ include "../node_modules/circomlib/circuits/comparators.circom";
 
 template Sha256Input(nBits) {
   assert(nBits % 64 == 0);
-  signal input num_bytes;
   var nBlocks = ((nBits + 64)\512)+1;
   signal input in[nBlocks*512];
+  signal input in_num_bits;
   signal output paddedIn[nBlocks*512];
 
-  var num_bits_in = num_bytes*8;
-  var nBlocks_in = ((num_bits_in + 64)\512)+1;
-  //assert(num_bits_in < nBits);    // We need room for the 1 bit at the end of input
+  var nBlocks_in = ((in_num_bits + 64)\512)+1;
+  //assert(in_num_bits < nBits);    // We need room for the 1 bit at the end of input
 
   // component nBlock_lt = LessThan(64);
   // nBlock_lt.in[0] <== (nBlocks_in-1)*512;
-  // nBlock_lt.in[1] <== num_bits_in+64;
+  // nBlock_lt.in[1] <== in_num_bits+64;
   // nBlock_lt.out === 1;
   // component nBlock_gt = GreaterEqThan(64);
   // nBlock_gt.in[0] <== (nBlocks_in-1)*512;
-  // nBlock_gt.in[1] <== num_bits_in-512;
+  // nBlock_gt.in[1] <== in_num_bits-512;
   // nBlock_gt.out === 1;
 
   component length_bits = Num2Bits(64);
-  length_bits.in <== num_bits_in;
+  length_bits.in <== in_num_bits;
 
   component decider_lt[nBlocks*512];
   component decider_eq[nBlocks*512];
@@ -42,11 +41,11 @@ template Sha256Input(nBits) {
     for (var i = 0; i < 448; i++) {
       decider_lt[k*512+i] = LessThan(64);
       decider_lt[k*512+i].in[0] <== k*512+i;
-      decider_lt[k*512+i].in[1] <== num_bits_in;
+      decider_lt[k*512+i].in[1] <== in_num_bits;
 
       decider_eq[k*512+i] = IsEqual();
       decider_eq[k*512+i].in[0] <== k*512+i;
-      decider_eq[k*512+i].in[1] <== num_bits_in;
+      decider_eq[k*512+i].in[1] <== in_num_bits;
 
       paddedIn[k*512+i] <== 1*decider_eq[k*512+i].out + (in[k*512+i] * decider_lt[k*512+i].out);
     }
@@ -59,21 +58,21 @@ template Sha256Input(nBits) {
     // Because the number of bits is from an input signal, we can only constrain the number of blocks by less than and greater than components
     constrain_lt[k] = LessThan(64);
     constrain_lt[k].in[0] <== decider_length[k].in[1]*512;
-    constrain_lt[k].in[1] <== num_bits_in+64;
+    constrain_lt[k].in[1] <== in_num_bits+64;
     constrain_lt[k].out === 1;
     constrain_gt[k] = GreaterEqThan(64);
     constrain_gt[k].in[0] <== decider_length[k].in[1]*512;
-    constrain_gt[k].in[1] <== num_bits_in-512;
+    constrain_gt[k].in[1] <== in_num_bits-512;
     constrain_gt[k].out === 1;
 
     for (var i = 448; i < 512; i++) {
       decider_lt[k*512+i] = LessThan(64);
       decider_lt[k*512+i].in[0] <== k*512+i;
-      decider_lt[k*512+i].in[1] <== num_bits_in;
+      decider_lt[k*512+i].in[1] <== in_num_bits;
 
       decider_eq[k*512+i] = IsEqual();
       decider_eq[k*512+i].in[0] <== k*512+i;
-      decider_eq[k*512+i].in[1] <== num_bits_in;
+      decider_eq[k*512+i].in[1] <== in_num_bits;
 
       muxers[k*64+i-448] = Mux2();
       muxers[k*64+i-448].c[0] <== 0;
@@ -91,21 +90,19 @@ template Sha256Input(nBits) {
 
 template Sha256Flexible(nBits) {
   assert(nBits % 512 == 0);
-  signal input num_bytes;
-  signal output out[256];
-
   var nBlocks = ((nBits + 64)\512)+1;
   signal input in[nBits];
+  signal input in_num_bits;
+  signal output out[256];
 
-  var num_bits_in = num_bytes*8;
-  var nBlocks_in = ((num_bits_in + 64)\512)+1;
+  var nBlocks_in = ((in_num_bits + 64)\512)+1;
 
   signal paddingInput[nBlocks*512];
   for (var i = 0; i < nBits; i++) paddingInput[i] <== in[i];
   for (var i = 0; i < 512; i++) paddingInput[i+nBits] <== 0;
 
   component padding = Sha256Input(nBits);
-  padding.num_bytes <== num_bytes;
+  padding.in_num_bits <== in_num_bits;
   padding.in <== paddingInput;
 
   signal bits[nBlocks*512] <== padding.paddedIn;

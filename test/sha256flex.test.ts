@@ -43,11 +43,11 @@ describe.only('Flexible sha256 circuit', async () => {
   it('Sha256_512', async () => {
     let input = Buffer.alloc(64).fill(0);
     input[0] = 1;
-    let witness = await sha_circuit.calculateWitness({in: bufferToBigIntArray(Buffer.from(bufferTobitArray(input))), num_bytes: 1});
+    let witness = await sha_circuit.calculateWitness({in: bufferToBigIntArray(Buffer.from(bufferTobitArray(input))), in_num_bits: 8});
     expect(bitArrayTobuffer(witness.slice(1,257)).toString('hex')).eq(toHex(sha256(Buffer.from([1]))));
 
     input[1] = 3;
-    witness = await sha_circuit.calculateWitness({in: bufferToBigIntArray(Buffer.from(bufferTobitArray(input))), num_bytes: 2});
+    witness = await sha_circuit.calculateWitness({in: bufferToBigIntArray(Buffer.from(bufferTobitArray(input))), in_num_bits: 16});
     expect(bitArrayTobuffer(witness.slice(1,257)).toString('hex')).eq(toHex(sha256(Buffer.from([1,3]))));
   });
 })
