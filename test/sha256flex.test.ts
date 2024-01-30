@@ -34,7 +34,7 @@ function bufferToBigIntArray(arr: Buffer): bigint[] {
   return res;
 }
 
-describe.only('Flexible sha256 circuit', async () => {
+describe('Flexible sha256 circuit', async () => {
   let sha_circuit_bits: any;
   let sha_circuit_bytes: any;
   let sha_circuit_bytes_256: any;
@@ -73,7 +73,7 @@ describe.only('Flexible sha256 circuit', async () => {
     expect(bitArrayTobuffer(witness.slice(1,257)).toString('hex')).eq(toHex(sha256(input.subarray(0,200))));
   });
 
-  it.only('Sha256 clientDataJSON example', async () => {
+  it('Sha256 clientDataJSON example', async () => {
     let data = Buffer.from("eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiSHg0ZEhCc2FHUmdYRmhVVUV4SVJFQThPRFF3TENna0lCd1lGQkFNQ0FRQSIsIm9yaWdpbiI6Imh0dHBzOi8vZ3JhbXRoYW5vcy5naXRodWIuaW8iLCJjcm9zc09yaWdpbiI6ZmFsc2UsInZpcnR1YWxfYXV0aGVudGljYXRvciI6IkdyYW1UaGFub3MgJiBVbml2ZXJzaXR5IG9mIFBpcmFldXMifQ", "base64");
     let input = Buffer.concat([data], 256);
     let witness = await sha_circuit_bytes_256.calculateWitness({in: bufferToBigIntArray(input), in_num_bytes: data.length});
