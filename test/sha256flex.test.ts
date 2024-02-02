@@ -38,10 +38,12 @@ describe('Flexible sha256 circuit', async () => {
   let sha_circuit_bits: any;
   let sha_circuit_bytes: any;
   let sha_circuit_bytes_256: any;
+  let num_blocks: any;
   before(async () => {
     sha_circuit_bits = await wasm_tester(path.join(__dirname, 'test_sha256flex_512.circom'));
     sha_circuit_bytes = await wasm_tester(path.join(__dirname, 'test_sha256flexbytes.circom'));
     sha_circuit_bytes_256 = await wasm_tester(path.join(__dirname, 'test_sha256flexbytes_256.circom'));
+    num_blocks = await wasm_tester(path.join(__dirname, 'test_numBlocks.circom'));
   })
 
   it('Sha256 512 bits', async () => {
@@ -79,5 +81,17 @@ describe('Flexible sha256 circuit', async () => {
     let witness = await sha_circuit_bytes_256.calculateWitness({in: bufferToBigIntArray(input), in_num_bytes: data.length});
 
     expect(bitArrayTobuffer(witness.slice(1,257)).toString('hex')).eq(toHex(sha256(data)));
+  });
+
+  it('Num blocks', async () => {
+    let block_calc = (bits: number) => {
+      return Math.floor((bits+64)/512)+1
+    };
+
+    for (let i = 0; i < 2048; i+=32) {
+      let witness = await num_blocks.calculateWitness({in: BigInt(i)});
+      
+      expect(witness[1]).eq(BigInt(block_calc(i)));
+    }
   });
 })
